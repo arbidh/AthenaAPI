@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const AWS = require('aws-sdk');
-const secretsManager = new AWS.SecretsManager();
-const SECRET_ID = "\\YourSecretID";
+const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let token;
@@ -34,8 +32,7 @@ exports.handler = async (event) => {
 
         // Ensure we have a valid token before making any API call.
  
-        token = await getAuthToken({ isProd: true })
-        console.log("Token:", token);
+    const token = await athena.getToken();
         if (appointmentid == null) {
             return {
                 statusCode: 400,
@@ -59,32 +56,7 @@ exports.handler = async (event) => {
     }
 };
 
-const getAuthToken = async ({ isProd }) => {
-    try {
-      const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
-        args: {
-          isProd
-        }
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
-      }
-  
-      const { token, data } = response.data;
-  
-      if (!token && data?.token) {
-        return data.token;
-      } else if (!token) {
-        throw new Error('No token found in response');
-      }
-  
-      return token;
-    } catch (error) {
-      console.error('Error fetching token via HTTP:', error.message);
-      throw error;
-    }
-  };
+// Token retrieval moved to AthenaClient.getToken()
 
 const cancel = async (appointmentid, cancellationreason, patientid) => {
 
@@ -97,7 +69,7 @@ const cancel = async (appointmentid, cancellationreason, patientid) => {
 
     console.log(`📅 Cancelling appointment ${appointmentid} for patient ${patientid}`);
 
-    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/appointments/${appointmentid}/cancel`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/${appointmentid}/cancel`;
 
     const headers = {
         'Authorization': `Bearer ${token.access_token}`,

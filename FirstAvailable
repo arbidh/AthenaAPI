@@ -1,9 +1,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const AWS = require('aws-sdk');
 const retell = require('retell-sdk');
-const secretsManager = new AWS.SecretsManager();
-const SECRET_ID = "prodAthena";
+const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let cachedToken;
@@ -43,7 +41,7 @@ exports.handler = async (event) => {
 
         // Ensure we have a valid token before making any API call.
        
-            cachedToken = await getAuthToken({ isProd: true });
+            cachedToken = await athena.getToken();
         
         
         const patientResponse = await bookPatient(providerid,appointmentDate,appointmentTime, patientid, -1, departmentid, appointmenttypeid);
@@ -81,32 +79,7 @@ const bookPatient = async (providerid,appointmentDate,appointmentTime, patientid
 
     return slot
 };
-const getAuthToken = async ({ isProd }) => {
-    try {
-      const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
-        args: {
-          isProd
-        }
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
-      }
-  
-      const { token, data } = response.data;
-  
-      if (!token && data?.token) {
-        return data.token;
-      } else if (!token) {
-        throw new Error('No token found in response');
-      }
-  
-      return token;
-    } catch (error) {
-      console.error('Error fetching token via HTTP:', error.message);
-      throw error;
-    }
-  };
+// Token retrieval moved to AthenaClient.getToken() — removed legacy GetAuthToken HTTP helper
 
   const findSlots = async (providerid, appointmentDate, appointmentTime, patientid, reasonid, departmentid, appointmenttypeid) => {
     const daysToAdvance = 30;
@@ -120,7 +93,7 @@ const getAuthToken = async ({ isProd }) => {
         throw new Error("Missing auth token");
     }
 
-    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/appointments/open`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/open`;
 
     // Create query params
     const params = {
@@ -182,57 +155,4 @@ function formatDateToISO(dateString) {
     }
     return dateString; // Return as is if it's already in the correct format
 }
-const getTokenFromSecretsManager = async () => {
-    try {
-        const secretValue = await secretsManager.getSecretValue({ SecretId: SECRET_ID }).promise();
-        const tokenData = JSON.parse(secretValue.SecretString);
-
-        if (Date.now() < tokenData.expires_at) {
-            console.log("Using cached token");
-            return tokenData;
-        }
-
-        return await getOAuthToken();
-    } catch (error) {
-        console.error('Error reading token from Secrets Manager:', error);
-        return await getOAuthToken();
-    }
-};
-
-const getOAuthToken = async () => {
-    const url = 'https://api.platform.athenahealth.com/oauth2/v1/token';
-    const client_id = "";//add client_id
-    const client_secret = "" ;//add client_secret
-    const data = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id:client_id,
-        client_secret: client_secret,
-        scope: 'athena/service/Athenanet.MDP.*',
-    });
-    try {
-        console.log("Attempting to fetch OAuth token...");
-
-        const response = await axios.post(url, data.toString(), {
-           headers: {
-               'Content-Type': 'application/x-www-form-urlencoded'
-           },
-        });
-
-        console.log("Token fetched successfully:", response.data);
-
-        const tokenData = {
-            access_token: response.data.access_token,
-            expires_at: Date.now() + response.data.expires_in * 1000,
-        };
-
-        await secretsManager.putSecretValue({
-            SecretId: SECRET_ID,
-            SecretString: JSON.stringify(tokenData),
-        }).promise();
-
-        return tokenData;
-    } catch (error) {
-        console.error('Error fetching OAuth token:', error.response?.data || error.message);
-        throw new Error("Failed to fetch token");
-    }
-};
+// Token retrieval moved to AthenaClient.getToken()

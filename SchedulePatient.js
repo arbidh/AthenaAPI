@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const AWS = require('aws-sdk');
-const secretsManager = new AWS.SecretsManager();
-const SECRET_ID = "athenaAuthTokenSecret";
+const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let cachedToken;
@@ -33,8 +31,8 @@ exports.handler = async (event) => {
 
         const { patientid, providerid, departmentid, existing, appointmentid, appointmenttypeid} = payload.args;
 
-        // Ensure we have a valid token before making any API call.
-        cachedToken = await getAuthToken({ isProd: true });
+    // Ensure we have a valid token before making any API call.
+    cachedToken = await athena.getToken();
         
 
         const reasonid = existing ? 4 : 12;
@@ -64,32 +62,7 @@ const formatDate = (date) => {
     return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 };
 
-const getAuthToken = async ({ isProd }) => {
-    try {
-      const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
-        args: {
-          isProd
-        }
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
-      }
-  
-      const { token, data } = response.data;
-  
-      if (!token && data?.token) {
-        return data.token;
-      } else if (!token) {
-        throw new Error('No token found in response');
-      }
-  
-      return token;
-    } catch (error) {
-      console.error('Error fetching token via HTTP:', error.message);
-      throw error;
-    }
-  };
+// Token retrieval moved to AthenaClient.getToken()
 
 const bookPatient = async (providerid,patientid, appointmentid,reasonid, departmentid, appointmenttypeid) => {
 

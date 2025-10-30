@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const AWS = require('aws-sdk');
-const secretsManager = new AWS.SecretsManager();
-const SECRET_ID = "athenaAuthTokenSecret";
+const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let cachedToken;
@@ -41,7 +39,7 @@ exports.handler = async (event) => {
 
         // Ensure we have a valid token before making any API call.
         
-        cachedToken = await getAuthToken({isProd: true});
+    cachedToken = await athena.getToken();
         
         // Get the reason ID first before searching for available slots
         //const providerid = await getProviders(fname,lname)
@@ -111,7 +109,7 @@ const findSlots = async (providerid,appointmentDate,appointmentTime, patientid, 
         throw new Error("Missing auth token");
     }
 
-    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/appointments/open`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/open`;
     console.log("🔍 slotProvierid:", providerid);
     console.log("🔍 slotDepartmentid:", departmentid);
     console.log("🔍 slotReasonid:", reasonid)
@@ -166,30 +164,4 @@ const findSlots = async (providerid,appointmentDate,appointmentTime, patientid, 
         throw new Error("Failed to fetch available slots");
     }
 };
-
-const getAuthToken = async ({ isProd }) => {
-    try {
-      const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
-        args: {
-          isProd
-        }
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
-      }
-  
-      const { token, data } = response.data;
-  
-      if (!token && data?.token) {
-        return data.token;
-      } else if (!token) {
-        throw new Error('No token found in response');
-      }
-  
-      return token;
-    } catch (error) {
-      console.error('Error fetching token via HTTP:', error.message);
-      throw error;
-    }
-  };
+// Token retrieval moved to AthenaClient.getToken()

@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const AWS = require('aws-sdk');
-const secretsManager = new AWS.SecretsManager();
-const SECRET_ID = "athenaAuthTokenSecret";
+const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let cachedToken;
@@ -40,10 +38,7 @@ exports.handler = async (event) => {
         const {patientid, departmentid} = payload.args;
 
         // Ensure we have a valid token before making any API call.
-        cachedToken = await getTokenFromSecretsManager();
-        if (!cachedToken) {
-            cachedToken = await getOAuthToken();
-        }
+        cachedToken = await athena.getToken();
 
         // Get the reason ID first before searching for available slots
         // const providerid = await getProviders(fname,lname)
@@ -71,7 +66,7 @@ const formatDate = (date) => {
 };
 
 const getBooked = async (patientid, departmentid) => {
-    const url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/appointments/booked`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/booked`;
     const today = new Date();
     const sixMonthsFromNow = new Date(today); // Create a new Date object
     sixMonthsFromNow.setDate(today.getDate() + 180);
@@ -80,7 +75,7 @@ const getBooked = async (patientid, departmentid) => {
         departmentid = 1;
     }
     if (!cachedToken) {
-        cachedToken = await getOAuthToken();
+        cachedToken = await athena.getToken();
     }
 
     const headers = {
@@ -141,11 +136,11 @@ const formatResponse = (statusCode, body) => ({
 
 
 const getProviders = async (fname, lname) => {
-    if (!cachedToken) {
-       cachedToken = await getOAuthToken();
-    }
+     if (!cachedToken) {
+         cachedToken = await athena.getToken();
+     }
 
-    const url = `https://api.preview.platform.athenahealth.com/v1/17568/providers?limit=5&name=${fname}`;
+    const url = `${athena.getBaseUrl()}/v1/17568/providers?limit=5&name=${fname}`;
     
     try {
         const response = await axios.get(url, {
@@ -187,7 +182,7 @@ const findSlots = async (providerid,appointmentDate,appointmentTime, patientid, 
         throw new Error("Missing auth token");
     }
 
-    const url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/appointments/open`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/open`;
     console.log("🔍 slotProvierid:", providerid);
     console.log("🔍 slotDepartmentid:", departmentid);
     console.log("🔍 slotReasonid:", reasonid)
@@ -244,13 +239,13 @@ const getPatientAppointmentReasons = async (providerid, departmentid, existing) 
     const provideridInt = parseInt(providerid, 10);
     const departmentidInt = parseInt(departmentid, 10);
     console.log("🔍 Fetching appointment reasons for provider:", provideridInt, "department:", departmentidInt);
-    let  url =`https://api.preview.platform.athenahealth.com/v1/${practiceid}/patientappointmentreasons/newpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
+    let url = `${athena.getBaseUrl()}/v1/${practiceid}/patientappointmentreasons/newpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
     if (existing) {
-        url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/patientappointmentreasons/existingpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
+        url = `${athena.getBaseUrl()}/v1/${practiceid}/patientappointmentreasons/existingpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
     }
-     
+
     if (!cachedToken) {
-        cachedToken = getOAuthToken()
+        cachedToken = await athena.getToken();
     }
 
     try {
@@ -261,68 +256,11 @@ const getPatientAppointmentReasons = async (providerid, departmentid, existing) 
         throw new Error("Failed to fetch appointment reasons");
     }
 };
+
 const getAppointmentReasonForPatient = async (providerid, departmentid, patientReason, existing) => {
     const reasons = await getPatientAppointmentReasons(providerid, departmentid, existing);
-    
-    const matchedReason = reasons.find(reason => reason.description.toLowerCase().includes(patientReason.toLowerCase()));
-
-    if (matchedReason) {
-        return matchedReason.reasonid;
-    } else {
-        return reasons.length > 0 ? reasons[0].reasonid : null;
-    }
-};
-const getTokenFromSecretsManager = async () => {
-    try {
-        const secretValue = await secretsManager.getSecretValue({ SecretId: SECRET_ID }).promise();
-        const tokenData = JSON.parse(secretValue.SecretString);
-
-        if (Date.now() < tokenData.expires_at) {
-            console.log("Using cached token");
-            return tokenData;
-        }
-
-        return await getOAuthToken();
-    } catch (error) {
-        console.error('Error reading token from Secrets Manager:', error);
-        return await getOAuthToken();
-    }
+    const matchedReason = reasons.find(reason => reason.description.toLowerCase().includes((patientReason || '').toLowerCase()));
+    return matchedReason ? matchedReason.reasonid : (reasons.length > 0 ? reasons[0].reasonid : null);
 };
 
-const getOAuthToken = async () => {
-    const url = 'https://api.preview.platform.athenahealth.com/oauth2/v1/token';
-    const client_id = 'test'; // add client id here  
-    const client_secret = 'test'; //add client_secreate here 
-    const data = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: client_id,
-        client_secret: client_secret,
-        scope: 'athena/service/Athenanet.MDP.*',
-    });
-    try {
-        console.log("Attempting to fetch OAuth token...");
-
-        const response = await axios.post(url, data.toString(), {
-           headers: {
-               'Content-Type': 'application/x-www-form-urlencoded'
-           },
-        });
-
-        console.log("Token fetched successfully:", response.data);
-
-        const tokenData = {
-            access_token: response.data.access_token,
-            expires_at: Date.now() + response.data.expires_in * 1000,
-        };
-
-        await secretsManager.putSecretValue({
-            SecretId: SECRET_ID,
-            SecretString: JSON.stringify(tokenData),
-        }).promise();
-
-        return tokenData;
-    } catch (error) {
-        console.error('Error fetching OAuth token:', error.response?.data || error.message);
-        throw new Error("Failed to fetch token");
-    }
-};
+// Token retrieval moved to AthenaClient.getToken()

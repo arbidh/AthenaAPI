@@ -1,7 +1,7 @@
-const AWS = require('aws-sdk');
 const axios = require('axios');
 const axiosRetry = require('axios-retry').default;
-const practiceid = 1;
+const athena = require('./AthenaClient');
+const practiceid = athena.getPracticeId(1);
 // Configure axios-retry
 axiosRetry(axios, {
     retries: 3,
@@ -9,7 +9,7 @@ axiosRetry(axios, {
     retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
 });
 
-const secretsManager = new AWS.SecretsManager();
+// Removed AWS SecretsManager; token management is in AthenaClient
 
 exports.handler = async (event) => {
     try {
@@ -19,7 +19,7 @@ exports.handler = async (event) => {
       if (!event.body) {
           return formatResponse(400, { error: "Missing or empty request body" });
       }
-      let token = await getAuthToken({ isProd: true });
+      const token = await athena.getToken();
 
       const payload = JSON.parse(event.body);
       const { firstName, lastName, phone, dateOfBirth } = payload.args;
@@ -90,72 +90,51 @@ const buildSearchTerm = ({ firstName, lastName, phone, dob }) => {
   return parts.length > 0 ? parts.join(' ') : null;
 };
 
-const getAuthToken = async ({ isProd }) => {
-  try {
-    const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
-      args: {
-        isProd
-      }
-    });
+// Token retrieval moved to AthenaClient.getToken()
+const FindPatients = async (token, firstName, lastName, phone, dateOfBirth, practiceid) => {
 
-    if (response.status !== 200) {
-      throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
-    }
-
-    const { token, data } = response.data;
-
-    if (!token && data?.token) {
-      return data.token;
-    } else if (!token) {
-      throw new Error('No token found in response');
-    }
-
-    return token;
-  } catch (error) {
-    console.error('Error fetching token via HTTP:', error.message);
-    throw error;
-  }
-};
-const FindPatients = async (token, firstName,lastName,phone,dateOfBirth, practiceid) => {
+  // Normalize and prefer name-based searches when a first or last name is provided.
+  const builtTerm = buildSearchTerm({ firstName, lastName, phone, dob: dateOfBirth });
 
   let searchtype = '';
   let searchterm = '';
-  if (firstName) {
-    searchtype = 'firstName';
-    searchterm = firstName;
-  }
-  if (lastName) {
-    searchtype = 'lastName';
-    searchterm = lastName;
-  }
-  if (phone) {
+
+  if (firstName || lastName) {
+    // If both first and last are present, use the generic 'name' searchtype.
+    // If only one of them is present, use 'firstname' or 'lastname' which Athena accepts.
+    if (firstName && lastName) {
+      searchtype = 'name';
+      searchterm = builtTerm;
+    } else if (firstName) {
+      searchtype = 'firstname';
+      searchterm = firstName && firstName.trim();
+    } else {
+      searchtype = 'lastname';
+      searchterm = lastName && lastName.trim();
+    }
+  } else if (phone) {
     searchtype = 'phone';
-    searchterm = phone;
-  }
-  console.log("DOB:", dateOfBirth)
-  if (validateDateOfBirth(dateOfBirth)) {
-    searchtype = 'DOB';
+    searchterm = phone && phone.trim();
+  } else if (dateOfBirth && validateDateOfBirth(dateOfBirth)) {
+    // Athena expects mm/dd/yyyy for DOB
+    searchtype = 'dob';
     searchterm = dateOfBirth;
-
   }
-  console.log("Search Term:", searchterm);
- console.log("Search Type:", searchtype);
+
   if (!searchterm) {
-    return formatResponse(400, { error: 'At least one search field is required.' });
+    return formatResponse(400, { error: 'At least one valid search field is required.' });
   }
 
-  const url = `https://api.platform.athenahealth.com/v1/${practiceid}/patients/search`;
+  const url = `${athena.getBaseUrl()}/v1/${practiceid}/patients/search`;
 
   const headers = {
-    'Authorization': `Bearer ${token.access_token}`,
-    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: `Bearer ${token.access_token}`,
   };
 
   const params = {
-    searchtype:searchtype,
-    searchterm
+    searchtype,
+    searchterm,
   };
-
 
   try {
     const response = await axios.get(url, { headers, params, timeout: 80000 });
@@ -168,19 +147,25 @@ const FindPatients = async (token, firstName,lastName,phone,dateOfBirth, practic
     }
 
     // Extract only patientid and name
-    const simplifiedPatients = patients.map(p => ({
+    const simplifiedPatients = patients.map((p) => ({
       patientid: p.patientid,
-      name: `${p.firstname ?? ''} ${p.lastname ?? ''}`.trim()
+      name: `${p.firstname ?? ''} ${p.lastname ?? ''}`.trim(),
     }));
 
     return formatResponse(200, { message: 'Patient(s) Found', data: simplifiedPatients });
-
-
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', error.response?.data || error.message || error);
+
+    // If Athena returned a 4xx, propagate it instead of always returning 500
+    const statusFromAthen = error.response?.status;
+    const details = error.response?.data || error.message;
+    if (statusFromAthen && statusFromAthen >= 400 && statusFromAthen < 500) {
+      return formatResponse(statusFromAthen, { message: 'Athena Error', details });
+    }
+
     return formatResponse(500, {
       message: 'Internal Server Error',
-      details: error.response?.data || error.message,
+      details,
     });
   }
 };
