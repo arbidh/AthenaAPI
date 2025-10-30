@@ -1,0 +1,164 @@
+const AWS = require('aws-sdk');
+const axios = require('axios');
+const axiosRetry = require('axios-retry').default;
+const practiceid = 1 //add your practice id here 
+// Configure axios-retry
+axiosRetry(axios, {
+    retries: 1,
+    retryDelay: (retryCount) => retryCount * 100,
+    retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
+});
+
+const secretsManager = new AWS.SecretsManager();
+
+exports.handler = async (event) => {
+    try {
+        console.log('Received Event:', JSON.stringify(event));
+
+        if (!event.body) {
+            return formatResponse(400, { error: "Missing or empty request body" });
+        }
+        let payload;
+        try {
+            payload = JSON.parse(event.body);
+        } catch (error) {
+            console.error("Failed to parse JSON:", error.message);
+            return formatResponse(400, { error: "Invalid JSON format" });
+        }
+
+        let token = await getTokenFromSecretManager();
+        if (!token) {
+            token = await refreshAndStoreToken();
+        }
+
+        const { firstName, lastName, phone, dateOfBirth } = payload.args;
+
+        const response = await createNewPatient(token, firstName, lastName, phone, dateOfBirth, 1);
+        console.log('Patient created successfully:', response);
+        return formatResponse(200, { message: 'Patient created successfully', data: response });
+    } catch (error) {
+        console.error('Error in handler:', error.message);
+        return formatResponse(500, { error: 'Internal Server Error' });
+    }
+};
+
+const getTokenFromSecretManager = async () => {
+    try {
+        const secretData = await secretsManager.getSecretValue({ SecretId: 'your secretID in AWS configured' }).promise();
+        if (secretData.SecretString) {
+            const secretValue = JSON.parse(secretData.SecretString);
+            const { access_token, expires_at } = secretValue;
+            console.log("Token fetched from Secrets Manager");
+            console.log("Token:", access_token);
+            console.log("Expires at:", expires_at);
+            if (Date.now() < new Date(expires_at)) {
+                return  access_token
+            } else {
+                console.log("Token expired, refreshing token...");
+                return await refreshAndStoreToken();
+            }
+        } else {
+            console.error("Secret has no string value");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching secret from Secrets Manager:", error.message);
+        return await refreshAndStoreToken();
+    }
+};
+
+const refreshAndStoreToken = async () => {
+    const tokenData = await getOAuthToken();
+    if (tokenData && tokenData.access_token) {
+        const expirationTime = new Date(Date.now() + (tokenData.expires_in - 10) * 1000);
+        const secretPayload = JSON.stringify({
+            token: tokenData.access_token,
+            expires_at: expirationTime.toISOString()
+        });
+
+        await secretsManager.putSecretValue({
+            SecretId: 'your token secret',
+            SecretString: secretPayload
+        }).promise();
+
+        console.log("New token stored in Secrets Manager");
+        return tokenData.access_token;
+    }
+    return null;
+};
+
+const getOAuthToken = async () => {
+    const url = 'https://api.platform.athenahealth.com/oauth2/v1/token';
+    const client_id = 'test';
+    const client_secret = 'test';
+    const data = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: client_id,
+        client_secret: client_secret,
+        scope: 'athena/service/Athenanet.MDP.*',
+    });
+
+    try {
+        const response = await axios.post(url, data.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000,
+        });
+        return response.data;
+    } catch (error) {
+        console.error('OAuth Token Error:', error.message);
+        return null;
+    }
+};
+
+const createNewPatient = async (token, firstName, lastName, phone, dateOfBirth, departmentid) => {
+    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/patients`;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+    };
+
+    if (departmentid === undefined || departmentid === null || !departmentid || !Number.isInteger(Number(departmentid))) {
+        departmentid = 1;
+    }
+
+    console.log('phone number:', phone);
+
+    const body = new URLSearchParams({
+        departmentid: departmentid,
+        dob: typeof dateOfBirth === 'string' ? dateOfBirth.trim() : '',
+        lastname: lastName,
+        firstname: firstName,
+        mobilephone: phone,
+        preferredname: firstName,
+    });
+
+    try {
+        const response = await axios.post(url,body.toString(),{headers, timeout: 350000 });
+        return response.data;
+    } catch (error) {
+        if (error.response) {
+            console.error('Error Response:', error.response.data);
+            return { error: error.response.data.message || 'Unknown error from Athena API' };
+        } else if (error.request) {
+            console.error('Network Error:', error.message);
+            return { error: 'Network Error: Failed to send request' };
+        } else {
+            console.error('Unexpected Error:', error.message);
+            return { error: 'Unexpected Error: Failed to process request' };
+        }
+    }
+};
+
+const validateDateOfBirth = (dob) => {
+    const dobRegex = /^(0[1-9]|1[0-2])\/([0-2][0-9]|3[01])\/\d{4}$/;
+    if (!dobRegex.test(dob)) return false;
+
+    const [month, day, year] = dob.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date && date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day;
+};
+
+const formatResponse = (statusCode, body) => ({
+    statusCode,
+    body: JSON.stringify(body),
+});

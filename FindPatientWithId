@@ -1,0 +1,177 @@
+const AWS = require('aws-sdk');
+const axios = require('axios');
+const axiosRetry = require('axios-retry').default;
+const retell = require('retell-sdk');
+const practiceid = 1;
+// Configure axios-retry
+axiosRetry(axios, {
+    retries: 3,
+    retryDelay: (retryCount) => retryCount * 100,
+    retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
+});
+
+const secretsManager = new AWS.SecretsManager();
+
+exports.handler = async (event) => {
+    try {
+        console.log(event.body);
+        console.log('Received Event:', JSON.stringify(event));
+
+        if (!event.body) {
+            return formatResponse(400, { error: "Missing or empty request body" });
+        }
+
+        const signature = event.headers["x-retell-signature"];
+        if (!retell.verify(event.body, process.env.RETELL_API_KEY, signature)) {
+            console.log("Unauthorized request");
+            return formatResponse(401, { error: "Unauthorized" });
+        }
+
+        const payload = JSON.parse(event.body);
+        const { patientID } = payload.args;
+
+        let token = await getTokenFromSecretManager();
+        if (!token) {
+            token = await getOAuthToken();
+        }
+         console.log("Token:", token);
+        const response = await FindPatients(token, patientID);
+        
+        return response;
+    } catch (error) {
+        console.error('Error in handler:', error);
+        return formatResponse(500, {
+            error: 'Internal Server Error',
+            message: error.message,
+            stack: error.stack
+        });
+    }
+};
+
+
+const getTokenFromSecretManager = async () => {
+    try {
+        const secretData = await secretsManager.getSecretValue({ SecretId: 'athenaAuthTokenSecret' }).promise();
+        if (secretData.SecretString) {
+            const secretValue = JSON.parse(secretData.SecretString);
+            const { access_token, expires_at } = secretValue;
+            console.log("Token fetched from Secrets Manager");
+            console.log("Token:", access_token);
+            console.log("Expires at:", expires_at);
+            // if (Date.now() < new Date(expires_at)) {
+            //     return  access_token
+            // } else {
+                console.log("Token expired, refreshing token...");
+                return await refreshAndStoreToken();
+            //}
+        } else {
+            console.error("Secret has no string value");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching secret from Secrets Manager:", error.message);
+        return await refreshAndStoreToken();
+    }
+};
+
+
+const refreshAndStoreToken = async () => {
+    const tokenData = await getOAuthToken();
+    if (tokenData && tokenData.access_token) {
+        const expirationTime = new Date(Date.now() + (tokenData.expires_in * 1000)); // Fix expiration calculation
+        const secretPayload = JSON.stringify({
+            access_token: tokenData.access_token,
+            expires_at: expirationTime.toISOString()
+        });
+
+        await secretsManager.putSecretValue({
+            SecretId: 'athenaAuthTokenSecret',
+            SecretString: secretPayload
+        }).promise();
+
+        console.log("New token stored in Secrets Manager");
+        return tokenData.access_token;
+    }
+    throw new Error("Failed to obtain new OAuth token");
+};
+
+
+const getOAuthToken = async () => {
+    const url = 'https://api.platform.athenahealth.com/oauth2/v1/token';
+    const client_id = 'test';
+    const client_secret = 'test';
+    const data = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: client_id,
+        client_secret: client_secret,
+        scope: 'athena/service/Athenanet.MDP.*',
+    });
+
+    try {
+        const response = await axios.post(url, data.toString(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000,
+        });
+        return response.data;
+    } catch (error) {
+        console.error('OAuth Token Error:', error.message);
+        return null;
+    }
+};
+
+const FindPatients = async (token, patientID) => {
+    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/patients/${patientID}
+    `;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+    };
+
+    try {
+     
+        
+        const response = await axios.get(url, { headers, timeout: 10000 });
+        console.log('API Response:', response.data);
+
+        if (Array.isArray(response.data) && response.data.length === 0) {
+            return formatResponse(404, { message: 'Patient Was Not Found', data: response.data });
+        }
+
+        const patient = response.data.find(p => p.patientid);
+        if (patient) {
+        return formatResponse(200, {
+            message: "Patient Found",
+            data: {
+                name: patient.firstname,
+                lastname: patient.lastname,
+                primarydepartmentid: patient.primarydepartmentid,
+                providerid: patient.primaryproviderid,
+            }
+        });
+
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        const status = error.response?.status || 500;
+        const message = error.response?.data?.message || 'Error retrieving patient information';
+        return formatResponse(status, { message });
+    }
+};
+
+
+
+
+const validateDateOfBirth = (dob) => {
+    const dobRegex = /^(0[1-9]|1[0-2])\/([0-2][0-9]|3[01])\/\d{4}$/;
+    if (!dobRegex.test(dob)) return false;
+
+    const [month, day, year] = dob.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date && date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day;
+};
+
+const formatResponse = (statusCode, body) => ({
+    statusCode,
+    body: JSON.stringify(body),
+});
+

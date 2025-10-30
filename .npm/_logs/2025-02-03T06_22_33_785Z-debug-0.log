@@ -1,0 +1,359 @@
+0 verbose cli /usr/bin/node-20 /usr/bin/npm
+1 info using npm@10.8.2
+2 info using node@v20.18.1
+3 silly config load:file:/usr/lib/node_modules_20/npm/npmrc
+4 silly config load:file:/home/cloudshell-user/.npmrc
+5 silly config load:file:/etc/npmrc
+6 verbose title npm install retell-sdk
+7 verbose argv "install" "retell-sdk"
+8 verbose logfile logs-max:10 dir:/home/cloudshell-user/.npm/_logs/2025-02-03T06_22_33_785Z-
+9 verbose logfile /home/cloudshell-user/.npm/_logs/2025-02-03T06_22_33_785Z-debug-0.log
+10 silly packumentCache heap:2057306112 maxSize:514326528 maxEntrySize:257163264
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly idealTree buildDeps
+14 silly fetch manifest retell-sdk@*
+15 silly packumentCache full:https://registry.npmjs.org/retell-sdk cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/npm 443ms
+17 http fetch GET 200 https://registry.npmjs.org/retell-sdk 394ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/retell-sdk set size:undefined disposed:false
+19 silly placeDep ROOT retell-sdk@4.18.0 OK for:  want: *
+20 silly fetch manifest @types/node@^18.11.18
+21 silly packumentCache full:https://registry.npmjs.org/@types%2fnode cache-miss
+22 http fetch GET 200 https://registry.npmjs.org/@types%2fnode 555ms (cache miss)
+23 silly packumentCache full:https://registry.npmjs.org/@types%2fnode set size:undefined disposed:false
+24 silly fetch manifest @types/node-fetch@^2.6.4
+25 silly packumentCache full:https://registry.npmjs.org/@types%2fnode-fetch cache-miss
+26 http fetch GET 200 https://registry.npmjs.org/@types%2fnode-fetch 125ms (cache miss)
+27 silly packumentCache full:https://registry.npmjs.org/@types%2fnode-fetch set size:undefined disposed:false
+28 silly fetch manifest abort-controller@^3.0.0
+29 silly packumentCache full:https://registry.npmjs.org/abort-controller cache-miss
+30 http fetch GET 200 https://registry.npmjs.org/abort-controller 76ms (cache miss)
+31 silly packumentCache full:https://registry.npmjs.org/abort-controller set size:undefined disposed:false
+32 silly fetch manifest agentkeepalive@^4.2.1
+33 silly packumentCache full:https://registry.npmjs.org/agentkeepalive cache-miss
+34 http fetch GET 200 https://registry.npmjs.org/agentkeepalive 60ms (cache miss)
+35 silly packumentCache full:https://registry.npmjs.org/agentkeepalive set size:undefined disposed:false
+36 silly fetch manifest form-data-encoder@1.7.2
+37 silly packumentCache full:https://registry.npmjs.org/form-data-encoder cache-miss
+38 http fetch GET 200 https://registry.npmjs.org/form-data-encoder 68ms (cache miss)
+39 silly packumentCache full:https://registry.npmjs.org/form-data-encoder set size:undefined disposed:false
+40 silly fetch manifest formdata-node@^4.3.2
+41 silly packumentCache full:https://registry.npmjs.org/formdata-node cache-miss
+42 http fetch GET 200 https://registry.npmjs.org/formdata-node 74ms (cache miss)
+43 silly packumentCache full:https://registry.npmjs.org/formdata-node set size:undefined disposed:false
+44 silly fetch manifest node-fetch@^2.6.7
+45 silly packumentCache full:https://registry.npmjs.org/node-fetch cache-miss
+46 http fetch GET 200 https://registry.npmjs.org/node-fetch 58ms (cache miss)
+47 silly packumentCache full:https://registry.npmjs.org/node-fetch set size:undefined disposed:false
+48 silly fetch manifest encoding@^0.1.0
+49 silly packumentCache full:https://registry.npmjs.org/encoding cache-miss
+50 http fetch GET 200 https://registry.npmjs.org/encoding 48ms (cache miss)
+51 silly packumentCache full:https://registry.npmjs.org/encoding set size:undefined disposed:false
+52 silly placeDep ROOT @types/node@18.19.74 OK for: retell-sdk@4.18.0 want: ^18.11.18
+53 silly placeDep ROOT @types/node-fetch@2.6.12 OK for: retell-sdk@4.18.0 want: ^2.6.4
+54 silly placeDep ROOT abort-controller@3.0.0 OK for: retell-sdk@4.18.0 want: ^3.0.0
+55 silly placeDep ROOT agentkeepalive@4.6.0 OK for: retell-sdk@4.18.0 want: ^4.2.1
+56 silly placeDep ROOT form-data-encoder@1.7.2 OK for: retell-sdk@4.18.0 want: 1.7.2
+57 silly placeDep ROOT formdata-node@4.4.1 OK for: retell-sdk@4.18.0 want: ^4.3.2
+58 silly placeDep ROOT node-fetch@2.7.0 OK for: retell-sdk@4.18.0 want: ^2.6.7
+59 silly fetch manifest undici-types@~5.26.4
+60 silly packumentCache full:https://registry.npmjs.org/undici-types cache-miss
+61 http fetch GET 200 https://registry.npmjs.org/undici-types 66ms (cache miss)
+62 silly packumentCache full:https://registry.npmjs.org/undici-types set size:undefined disposed:false
+63 silly fetch manifest event-target-shim@^5.0.0
+64 silly packumentCache full:https://registry.npmjs.org/event-target-shim cache-miss
+65 http fetch GET 200 https://registry.npmjs.org/event-target-shim 52ms (cache miss)
+66 silly packumentCache full:https://registry.npmjs.org/event-target-shim set size:undefined disposed:false
+67 silly fetch manifest humanize-ms@^1.2.1
+68 silly packumentCache full:https://registry.npmjs.org/humanize-ms cache-miss
+69 http fetch GET 200 https://registry.npmjs.org/humanize-ms 47ms (cache miss)
+70 silly packumentCache full:https://registry.npmjs.org/humanize-ms set size:undefined disposed:false
+71 silly fetch manifest node-domexception@1.0.0
+72 silly packumentCache full:https://registry.npmjs.org/node-domexception cache-miss
+73 http fetch GET 200 https://registry.npmjs.org/node-domexception 42ms (cache miss)
+74 silly packumentCache full:https://registry.npmjs.org/node-domexception set size:undefined disposed:false
+75 silly fetch manifest web-streams-polyfill@4.0.0-beta.3
+76 silly packumentCache full:https://registry.npmjs.org/web-streams-polyfill cache-miss
+77 http fetch GET 200 https://registry.npmjs.org/web-streams-polyfill 30ms (cache miss)
+78 silly packumentCache full:https://registry.npmjs.org/web-streams-polyfill set size:undefined disposed:false
+79 silly fetch manifest whatwg-url@^5.0.0
+80 silly packumentCache full:https://registry.npmjs.org/whatwg-url cache-miss
+81 http fetch GET 200 https://registry.npmjs.org/whatwg-url 47ms (cache miss)
+82 silly packumentCache full:https://registry.npmjs.org/whatwg-url set size:undefined disposed:false
+83 silly placeDep ROOT undici-types@5.26.5 OK for: @types/node@18.19.74 want: ~5.26.4
+84 silly placeDep ROOT event-target-shim@5.0.1 OK for: abort-controller@3.0.0 want: ^5.0.0
+85 silly placeDep ROOT humanize-ms@1.2.1 OK for: agentkeepalive@4.6.0 want: ^1.2.1
+86 silly placeDep ROOT node-domexception@1.0.0 OK for: formdata-node@4.4.1 want: 1.0.0
+87 silly placeDep ROOT web-streams-polyfill@4.0.0-beta.3 OK for: formdata-node@4.4.1 want: 4.0.0-beta.3
+88 silly placeDep ROOT whatwg-url@5.0.0 OK for: node-fetch@2.7.0 want: ^5.0.0
+89 silly fetch manifest tr46@~0.0.3
+90 silly packumentCache full:https://registry.npmjs.org/tr46 cache-miss
+91 http fetch GET 200 https://registry.npmjs.org/tr46 40ms (cache miss)
+92 silly packumentCache full:https://registry.npmjs.org/tr46 set size:undefined disposed:false
+93 silly fetch manifest webidl-conversions@^3.0.0
+94 silly packumentCache full:https://registry.npmjs.org/webidl-conversions cache-miss
+95 http fetch GET 200 https://registry.npmjs.org/webidl-conversions 31ms (cache miss)
+96 silly packumentCache full:https://registry.npmjs.org/webidl-conversions set size:undefined disposed:false
+97 silly placeDep ROOT tr46@0.0.3 OK for: whatwg-url@5.0.0 want: ~0.0.3
+98 silly placeDep ROOT webidl-conversions@3.0.1 OK for: whatwg-url@5.0.0 want: ^3.0.0
+99 silly reify moves {}
+100 silly audit bulk request {
+100 silly audit   '@aws-crypto/sha256-browser': [ '5.2.0' ],
+100 silly audit   '@smithy/is-array-buffer': [ '2.2.0', '4.0.0' ],
+100 silly audit   '@smithy/util-buffer-from': [ '2.2.0', '4.0.0' ],
+100 silly audit   '@smithy/util-utf8': [ '2.3.0', '4.0.0' ],
+100 silly audit   '@aws-crypto/sha256-js': [ '5.2.0' ],
+100 silly audit   '@aws-crypto/supports-web-crypto': [ '5.2.0' ],
+100 silly audit   '@aws-crypto/util': [ '5.2.0' ],
+100 silly audit   '@aws-sdk/client-secrets-manager': [ '3.734.0' ],
+100 silly audit   uuid: [ '9.0.1', '8.0.0' ],
+100 silly audit   '@aws-sdk/client-sso': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/core': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-env': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-http': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-ini': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-node': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-process': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-sso': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/credential-provider-web-identity': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/middleware-host-header': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/middleware-logger': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/middleware-recursion-detection': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/middleware-user-agent': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/nested-clients': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/region-config-resolver': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/token-providers': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/types': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/util-endpoints': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/util-locate-window': [ '3.723.0' ],
+100 silly audit   '@aws-sdk/util-user-agent-browser': [ '3.734.0' ],
+100 silly audit   '@aws-sdk/util-user-agent-node': [ '3.734.0' ],
+100 silly audit   '@smithy/abort-controller': [ '4.0.1' ],
+100 silly audit   '@smithy/config-resolver': [ '4.0.1' ],
+100 silly audit   '@smithy/core': [ '3.1.2' ],
+100 silly audit   '@smithy/credential-provider-imds': [ '4.0.1' ],
+100 silly audit   '@smithy/fetch-http-handler': [ '5.0.1' ],
+100 silly audit   '@smithy/hash-node': [ '4.0.1' ],
+100 silly audit   '@smithy/invalid-dependency': [ '4.0.1' ],
+100 silly audit   '@smithy/middleware-content-length': [ '4.0.1' ],
+100 silly audit   '@smithy/middleware-endpoint': [ '4.0.3' ],
+100 silly audit   '@smithy/middleware-retry': [ '4.0.4' ],
+100 silly audit   '@smithy/middleware-serde': [ '4.0.2' ],
+100 silly audit   '@smithy/middleware-stack': [ '4.0.1' ],
+100 silly audit   '@smithy/node-config-provider': [ '4.0.1' ],
+100 silly audit   '@smithy/node-http-handler': [ '4.0.2' ],
+100 silly audit   '@smithy/property-provider': [ '4.0.1' ],
+100 silly audit   '@smithy/protocol-http': [ '5.0.1' ],
+100 silly audit   '@smithy/querystring-builder': [ '4.0.1' ],
+100 silly audit   '@smithy/querystring-parser': [ '4.0.1' ],
+100 silly audit   '@smithy/service-error-classification': [ '4.0.1' ],
+100 silly audit   '@smithy/shared-ini-file-loader': [ '4.0.1' ],
+100 silly audit   '@smithy/signature-v4': [ '5.0.1' ],
+100 silly audit   '@smithy/smithy-client': [ '4.1.3' ],
+100 silly audit   '@smithy/types': [ '4.1.0' ],
+100 silly audit   '@smithy/url-parser': [ '4.0.1' ],
+100 silly audit   '@smithy/util-base64': [ '4.0.0' ],
+100 silly audit   '@smithy/util-body-length-browser': [ '4.0.0' ],
+100 silly audit   '@smithy/util-body-length-node': [ '4.0.0' ],
+100 silly audit   '@smithy/util-config-provider': [ '4.0.0' ],
+100 silly audit   '@smithy/util-defaults-mode-browser': [ '4.0.4' ],
+100 silly audit   '@smithy/util-defaults-mode-node': [ '4.0.4' ],
+100 silly audit   '@smithy/util-endpoints': [ '3.0.1' ],
+100 silly audit   '@smithy/util-hex-encoding': [ '4.0.0' ],
+100 silly audit   '@smithy/util-middleware': [ '4.0.1' ],
+100 silly audit   '@smithy/util-retry': [ '4.0.1' ],
+100 silly audit   '@smithy/util-stream': [ '4.0.2' ],
+100 silly audit   '@smithy/util-uri-escape': [ '4.0.0' ],
+100 silly audit   '@types/uuid': [ '9.0.8' ],
+100 silly audit   accepts: [ '1.3.8' ],
+100 silly audit   'array-flatten': [ '1.1.1' ],
+100 silly audit   asynckit: [ '0.4.0' ],
+100 silly audit   'available-typed-arrays': [ '1.0.7' ],
+100 silly audit   'aws-sdk': [ '2.1692.0' ],
+100 silly audit   awssdk: [ '1.0.1' ],
+100 silly audit   axios: [ '1.7.9' ],
+100 silly audit   'axios-retry': [ '4.5.0' ],
+100 silly audit   'base64-js': [ '1.5.1' ],
+100 silly audit   'body-parser': [ '1.20.3' ],
+100 silly audit   bowser: [ '2.11.0' ],
+100 silly audit   buffer: [ '4.9.2' ],
+100 silly audit   bytes: [ '3.1.2' ],
+100 silly audit   'call-bind': [ '1.0.8' ],
+100 silly audit   'call-bind-apply-helpers': [ '1.0.1' ],
+100 silly audit   'call-bound': [ '1.0.3' ],
+100 silly audit   'combined-stream': [ '1.0.8' ],
+100 silly audit   'content-disposition': [ '0.5.4' ],
+100 silly audit   'content-type': [ '1.0.5' ],
+100 silly audit   cookie: [ '0.7.1' ],
+100 silly audit   'cookie-signature': [ '1.0.6' ],
+100 silly audit   crypto: [ '1.0.1' ],
+100 silly audit   debug: [ '2.6.9' ],
+100 silly audit   'define-data-property': [ '1.1.4' ],
+100 silly audit   'delayed-stream': [ '1.0.0' ],
+100 silly audit   depd: [ '2.0.0' ],
+100 silly audit   destroy: [ '1.2.0' ],
+100 silly audit   'dunder-proto': [ '1.0.1' ],
+100 silly audit   'ee-first': [ '1.1.1' ],
+100 silly audit   encodeurl: [ '2.0.0', '1.0.2' ],
+100 silly audit   'es-define-property': [ '1.0.1' ],
+100 silly audit   'es-errors': [ '1.3.0' ],
+100 silly audit   'es-object-atoms': [ '1.1.1' ],
+100 silly audit   'escape-html': [ '1.0.3' ],
+100 silly audit   etag: [ '1.8.1' ],
+100 silly audit   events: [ '1.1.1' ],
+100 silly audit   express: [ '4.21.2' ],
+100 silly audit   'fast-xml-parser': [ '4.4.1' ],
+100 silly audit   finalhandler: [ '1.3.1' ],
+100 silly audit   'follow-redirects': [ '1.15.9' ],
+100 silly audit   'for-each': [ '0.3.4' ],
+100 silly audit   'form-data': [ '4.0.1' ],
+100 silly audit   forwarded: [ '0.2.0' ],
+100 silly audit   fresh: [ '0.5.2' ],
+100 silly audit   'function-bind': [ '1.1.2' ],
+100 silly audit   'get-intrinsic': [ '1.2.7' ],
+100 silly audit   'get-proto': [ '1.0.1' ],
+100 silly audit   gopd: [ '1.2.0' ],
+100 silly audit   'has-property-descriptors': [ '1.0.2' ],
+100 silly audit   'has-symbols': [ '1.1.0' ],
+100 silly audit   'has-tostringtag': [ '1.0.2' ],
+100 silly audit   hasown: [ '2.0.2' ],
+100 silly audit   'http-errors': [ '2.0.0' ],
+100 silly audit   'iconv-lite': [ '0.4.24' ],
+100 silly audit   ieee754: [ '1.1.13' ],
+100 silly audit   inherits: [ '2.0.4' ],
+100 silly audit   'ipaddr.js': [ '1.9.1' ],
+100 silly audit   'is-arguments': [ '1.2.0' ],
+100 silly audit   'is-callable': [ '1.2.7' ],
+100 silly audit   'is-generator-function': [ '1.1.0' ],
+100 silly audit   'is-regex': [ '1.2.1' ],
+100 silly audit   'is-retry-allowed': [ '2.2.0' ],
+100 silly audit   'is-typed-array': [ '1.1.15' ],
+100 silly audit   isarray: [ '1.0.0' ],
+100 silly audit   jmespath: [ '0.16.0' ],
+100 silly audit   'math-intrinsics': [ '1.1.0' ],
+100 silly audit   'media-typer': [ '0.3.0' ],
+100 silly audit   'merge-descriptors': [ '1.0.3' ],
+100 silly audit   methods: [ '1.1.2' ],
+100 silly audit   mime: [ '1.6.0' ],
+100 silly audit   'mime-db': [ '1.52.0' ],
+100 silly audit   'mime-types': [ '2.1.35' ],
+100 silly audit   moment: [ '2.30.1' ],
+100 silly audit   ms: [ '2.0.0', '2.1.3' ],
+100 silly audit   negotiator: [ '0.6.3' ],
+100 silly audit   'object-inspect': [ '1.13.3' ],
+100 silly audit   'on-finished': [ '2.4.1' ],
+100 silly audit   parseurl: [ '1.3.3' ],
+100 silly audit   'path-to-regexp': [ '0.1.12' ],
+100 silly audit   'possible-typed-array-names': [ '1.0.0' ],
+100 silly audit   'proxy-addr': [ '2.0.7' ],
+100 silly audit   'proxy-from-env': [ '1.1.0' ],
+100 silly audit   punycode: [ '1.3.2' ],
+100 silly audit   qs: [ '6.13.0' ],
+100 silly audit   querystring: [ '0.2.0' ],
+100 silly audit   'range-parser': [ '1.2.1' ],
+100 silly audit   'raw-body': [ '2.5.2' ],
+100 silly audit   'safe-buffer': [ '5.2.1' ],
+100 silly audit   'safe-regex-test': [ '1.1.0' ],
+100 silly audit   'safer-buffer': [ '2.1.2' ],
+100 silly audit   sax: [ '1.2.1' ],
+100 silly audit   send: [ '0.19.0' ],
+100 silly audit   'serve-static': [ '1.16.2' ],
+100 silly audit   'serverless-http': [ '3.2.0' ],
+100 silly audit   'set-function-length': [ '1.2.2' ],
+100 silly audit   setprototypeof: [ '1.2.0' ],
+100 silly audit   'side-channel': [ '1.1.0' ],
+100 silly audit   'side-channel-list': [ '1.0.0' ],
+100 silly audit   'side-channel-map': [ '1.0.1' ],
+100 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+100 silly audit   statuses: [ '2.0.1' ],
+100 silly audit   strnum: [ '1.0.5' ],
+100 silly audit   toidentifier: [ '1.0.1' ],
+100 silly audit   tslib: [ '2.8.1' ],
+100 silly audit   'type-is': [ '1.6.18' ],
+100 silly audit   unpipe: [ '1.0.0' ],
+100 silly audit   url: [ '0.10.3' ],
+100 silly audit   util: [ '0.12.5' ],
+100 silly audit   'utils-merge': [ '1.0.1' ],
+100 silly audit   vary: [ '1.1.2' ],
+100 silly audit   'which-typed-array': [ '1.1.18' ],
+100 silly audit   xml2js: [ '0.6.2' ],
+100 silly audit   xmlbuilder: [ '11.0.1' ],
+100 silly audit   'retell-sdk': [ '4.18.0' ],
+100 silly audit   '@types/node': [ '18.19.74' ],
+100 silly audit   '@types/node-fetch': [ '2.6.12' ],
+100 silly audit   'abort-controller': [ '3.0.0' ],
+100 silly audit   agentkeepalive: [ '4.6.0' ],
+100 silly audit   'form-data-encoder': [ '1.7.2' ],
+100 silly audit   'formdata-node': [ '4.4.1' ],
+100 silly audit   'node-fetch': [ '2.7.0' ],
+100 silly audit   'undici-types': [ '5.26.5' ],
+100 silly audit   'event-target-shim': [ '5.0.1' ],
+100 silly audit   'humanize-ms': [ '1.2.1' ],
+100 silly audit   'node-domexception': [ '1.0.0' ],
+100 silly audit   'web-streams-polyfill': [ '4.0.0-beta.3' ],
+100 silly audit   'whatwg-url': [ '5.0.0' ],
+100 silly audit   tr46: [ '0.0.3' ],
+100 silly audit   'webidl-conversions': [ '3.0.1' ]
+100 silly audit }
+101 silly tarball no local data for webidl-conversions@https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-3.0.1.tgz. Extracting by manifest.
+102 silly tarball no local data for tr46@https://registry.npmjs.org/tr46/-/tr46-0.0.3.tgz. Extracting by manifest.
+103 silly tarball no local data for whatwg-url@https://registry.npmjs.org/whatwg-url/-/whatwg-url-5.0.0.tgz. Extracting by manifest.
+104 silly tarball no local data for web-streams-polyfill@https://registry.npmjs.org/web-streams-polyfill/-/web-streams-polyfill-4.0.0-beta.3.tgz. Extracting by manifest.
+105 silly tarball no local data for node-domexception@https://registry.npmjs.org/node-domexception/-/node-domexception-1.0.0.tgz. Extracting by manifest.
+106 silly tarball no local data for humanize-ms@https://registry.npmjs.org/humanize-ms/-/humanize-ms-1.2.1.tgz. Extracting by manifest.
+107 silly tarball no local data for event-target-shim@https://registry.npmjs.org/event-target-shim/-/event-target-shim-5.0.1.tgz. Extracting by manifest.
+108 silly tarball no local data for undici-types@https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz. Extracting by manifest.
+109 silly tarball no local data for node-fetch@https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz. Extracting by manifest.
+110 silly tarball no local data for formdata-node@https://registry.npmjs.org/formdata-node/-/formdata-node-4.4.1.tgz. Extracting by manifest.
+111 silly tarball no local data for form-data-encoder@https://registry.npmjs.org/form-data-encoder/-/form-data-encoder-1.7.2.tgz. Extracting by manifest.
+112 silly tarball no local data for agentkeepalive@https://registry.npmjs.org/agentkeepalive/-/agentkeepalive-4.6.0.tgz. Extracting by manifest.
+113 silly tarball no local data for abort-controller@https://registry.npmjs.org/abort-controller/-/abort-controller-3.0.0.tgz. Extracting by manifest.
+114 silly tarball no local data for @types/node-fetch@https://registry.npmjs.org/@types/node-fetch/-/node-fetch-2.6.12.tgz. Extracting by manifest.
+115 silly tarball no local data for @types/node@https://registry.npmjs.org/@types/node/-/node-18.19.74.tgz. Extracting by manifest.
+116 silly tarball no local data for retell-sdk@https://registry.npmjs.org/retell-sdk/-/retell-sdk-4.18.0.tgz. Extracting by manifest.
+117 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 192ms
+118 silly audit report {}
+119 http fetch GET 200 https://registry.npmjs.org/humanize-ms/-/humanize-ms-1.2.1.tgz 749ms (cache miss)
+120 http fetch GET 200 https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-3.0.1.tgz 801ms (cache miss)
+121 http fetch GET 200 https://registry.npmjs.org/@types/node-fetch/-/node-fetch-2.6.12.tgz 816ms (cache miss)
+122 http fetch GET 200 https://registry.npmjs.org/event-target-shim/-/event-target-shim-5.0.1.tgz 830ms (cache miss)
+123 http fetch GET 200 https://registry.npmjs.org/whatwg-url/-/whatwg-url-5.0.0.tgz 895ms (cache miss)
+124 http fetch GET 200 https://registry.npmjs.org/agentkeepalive/-/agentkeepalive-4.6.0.tgz 888ms (cache miss)
+125 http fetch GET 200 https://registry.npmjs.org/abort-controller/-/abort-controller-3.0.0.tgz 998ms (cache miss)
+126 http fetch GET 200 https://registry.npmjs.org/node-domexception/-/node-domexception-1.0.0.tgz 1025ms (cache miss)
+127 http fetch GET 200 https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz 1028ms (cache miss)
+128 http fetch GET 200 https://registry.npmjs.org/tr46/-/tr46-0.0.3.tgz 1093ms (cache miss)
+129 http fetch GET 200 https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz 1043ms (cache miss)
+130 http fetch GET 200 https://registry.npmjs.org/form-data-encoder/-/form-data-encoder-1.7.2.tgz 1108ms (cache miss)
+131 http fetch GET 200 https://registry.npmjs.org/formdata-node/-/formdata-node-4.4.1.tgz 1112ms (cache miss)
+132 http fetch GET 200 https://registry.npmjs.org/web-streams-polyfill/-/web-streams-polyfill-4.0.0-beta.3.tgz 1132ms (cache miss)
+133 http fetch GET 200 https://registry.npmjs.org/@types/node/-/node-18.19.74.tgz 1429ms (cache miss)
+134 http fetch GET 200 https://registry.npmjs.org/retell-sdk/-/retell-sdk-4.18.0.tgz 1483ms (cache miss)
+135 silly ADD node_modules/webidl-conversions
+136 silly ADD node_modules/tr46
+137 silly ADD node_modules/whatwg-url
+138 silly ADD node_modules/web-streams-polyfill
+139 silly ADD node_modules/node-domexception
+140 silly ADD node_modules/humanize-ms
+141 silly ADD node_modules/event-target-shim
+142 silly ADD node_modules/undici-types
+143 silly ADD node_modules/node-fetch
+144 silly ADD node_modules/formdata-node
+145 silly ADD node_modules/form-data-encoder
+146 silly ADD node_modules/agentkeepalive
+147 silly ADD node_modules/abort-controller
+148 silly ADD node_modules/@types/node-fetch
+149 silly ADD node_modules/@types/node
+150 silly ADD node_modules/retell-sdk
+151 verbose cwd /home/cloudshell-user
+152 verbose os Linux 6.1.119-129.201.amzn2023.x86_64
+153 verbose node v20.18.1
+154 verbose npm  v10.8.2
+155 notice
+155 notice New [31mmajor[39m version of npm available! [31m10.8.2[39m -> [34m11.1.0[39m
+155 notice Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.1.0[39m
+155 notice To update run: [4mnpm install -g npm@11.1.0[24m
+155 notice  { force: true, [Symbol(proc-log.meta)]: true }
+156 verbose exit 0
+157 info ok

@@ -1,0 +1,195 @@
+const AWS = require('aws-sdk');
+const axios = require('axios');
+const axiosRetry = require('axios-retry').default;
+const practiceid = 1;
+// Configure axios-retry
+axiosRetry(axios, {
+    retries: 3,
+    retryDelay: (retryCount) => retryCount * 100,
+    retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
+});
+
+const secretsManager = new AWS.SecretsManager();
+
+exports.handler = async (event) => {
+    try {
+      console.log(event.body);
+      console.log('Received Event:', JSON.stringify(event));
+
+      if (!event.body) {
+          return formatResponse(400, { error: "Missing or empty request body" });
+      }
+      let token = await getAuthToken({ isProd: true });
+
+      const payload = JSON.parse(event.body);
+      const { firstName, lastName, phone, dateOfBirth } = payload.args;
+      const response = await FindPatients(token, firstName,lastName,phone,dateOfBirth, practiceid);
+      
+        return response;
+    } catch (error) {
+        console.error('Error in handler:', error);
+        return formatResponse(500, {
+            error: 'Internal Server Error',
+            message: error.message,
+            stack: error.stack
+        });
+    }
+};
+
+const formatResponse = (statusCode, body) => ({
+  statusCode,
+  body: JSON.stringify(body),
+});
+
+const formatDOBForAthena = (dob) => {
+  const dashPattern = /^\d{2}-\d{2}-\d{4}$/;
+  const slashPattern = /^\d{2}\/\d{2}\/\d{4}$/;
+
+  if (slashPattern.test(dob)) return dob;
+  if (dashPattern.test(dob)) return dob.replace(/-/g, '/');
+  return null;
+};
+
+const buildSearchTerm = ({ firstName, lastName, phone, dob }) => {
+  const parts = [];
+
+  // Debugging logs to check each field
+  console.log("Checking fields: ", { firstName, lastName, phone, dob });
+
+  if (firstName && firstName.trim()) {
+    parts.push(firstName.trim());
+  } else {
+    console.log("First name is invalid or empty");
+  }
+
+  if (lastName && lastName.trim()) {
+    parts.push(lastName.trim());
+  } else {
+    console.log("Last name is invalid or empty");
+  }
+
+  if (phone && phone.trim()) {
+    parts.push(phone.trim());
+  } else {
+    console.log("Phone is invalid or empty");
+  }
+
+  if (dob && dob.trim()) {
+    const formattedDOB = dob.trim();
+    if (formattedDOB) {
+      parts.push(formattedDOB);
+    } else {
+      console.log("DOB is invalid or could not be formatted");
+    }
+  } else {
+    console.log("DOB is invalid or empty");
+  }
+
+  console.log("Built search term parts: ", parts);
+
+  return parts.length > 0 ? parts.join(' ') : null;
+};
+
+const getAuthToken = async ({ isProd }) => {
+  try {
+    const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
+      args: {
+        isProd
+      }
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
+    }
+
+    const { token, data } = response.data;
+
+    if (!token && data?.token) {
+      return data.token;
+    } else if (!token) {
+      throw new Error('No token found in response');
+    }
+
+    return token;
+  } catch (error) {
+    console.error('Error fetching token via HTTP:', error.message);
+    throw error;
+  }
+};
+const FindPatients = async (token, firstName,lastName,phone,dateOfBirth, practiceid) => {
+
+  let searchtype = '';
+  let searchterm = '';
+  if (firstName) {
+    searchtype = 'firstName';
+    searchterm = firstName;
+  }
+  if (lastName) {
+    searchtype = 'lastName';
+    searchterm = lastName;
+  }
+  if (phone) {
+    searchtype = 'phone';
+    searchterm = phone;
+  }
+  console.log("DOB:", dateOfBirth)
+  if (validateDateOfBirth(dateOfBirth)) {
+    searchtype = 'DOB';
+    searchterm = dateOfBirth;
+
+  }
+  console.log("Search Term:", searchterm);
+ console.log("Search Type:", searchtype);
+  if (!searchterm) {
+    return formatResponse(400, { error: 'At least one search field is required.' });
+  }
+
+  const url = `https://api.platform.athenahealth.com/v1/${practiceid}/patients/search`;
+
+  const headers = {
+    'Authorization': `Bearer ${token.access_token}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+
+  const params = {
+    searchtype:searchtype,
+    searchterm
+  };
+
+
+  try {
+    const response = await axios.get(url, { headers, params, timeout: 80000 });
+    console.log('API Response:', response.data);
+
+    const patients = response.data?.patients;
+
+    if (!Array.isArray(patients) || patients.length === 0) {
+      return formatResponse(404, { message: 'Patient Not Found', data: [] });
+    }
+
+    // Extract only patientid and name
+    const simplifiedPatients = patients.map(p => ({
+      patientid: p.patientid,
+      name: `${p.firstname ?? ''} ${p.lastname ?? ''}`.trim()
+    }));
+
+    return formatResponse(200, { message: 'Patient(s) Found', data: simplifiedPatients });
+
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    return formatResponse(500, {
+      message: 'Internal Server Error',
+      details: error.response?.data || error.message,
+    });
+  }
+};
+
+const validateDateOfBirth = (dob) => {
+  const dobRegex = /^(0[1-9]|1[0-2])\/([0-2][0-9]|3[01])\/\d{4}$/;
+  if (!dobRegex.test(dob)) return false;
+
+  const [month, day, year] = dob.split('/').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date && date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day;
+};

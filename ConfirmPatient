@@ -1,0 +1,195 @@
+const crypto = require('crypto');
+const axios = require('axios');
+const AWS = require('aws-sdk');
+const secretsManager = new AWS.SecretsManager();
+const SECRET_ID = "athenaAuthTokenSecret";
+
+// Global cachedToken variable
+let cachedToken;
+const axiosRetry = require('axios-retry').default;
+const practiceid = 17568
+
+
+axiosRetry(axios, {
+    retries: 3, // Retry up to 3 times
+    retryDelay: (retryCount) => retryCount * 2000, // Wait 2s, 4s, 6s before retrying
+    retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
+});
+
+exports.handler = async (event) => {
+    try {
+        console.log('Raw event body:', event.body);
+
+        if (!event.body || event.body.trim() === "") {
+            return { 
+                statusCode: 400, 
+                body: JSON.stringify({ error: "Missing or empty request body" }) 
+            };
+        }
+        let payload;
+        try {
+            payload = JSON.parse(event.body);
+        } catch (error) {
+            return { 
+                statusCode: 400, 
+                body: JSON.stringify({ error: "Invalid JSON format" }) 
+            };
+        }
+        console.log("Parsed payload:", payload);
+        
+        const {providerid,appointmentDate,appointmentTime, patientid, existing, departmentid} = payload.args;
+
+        // Ensure we have a valid token before making any API call.
+        
+        cachedToken = await getAuthToken({isProd: true});
+        
+        // Get the reason ID first before searching for available slots
+        //const providerid = await getProviders(fname,lname)
+        // const reasonid = await getAppointmentReasonForPatient(providerid,1, reason,existing)
+        const reasonid = existing ? 4: 12
+        const patientResponse = await bookPatient(providerid,appointmentDate,appointmentTime, patientid, reasonid, departmentid);
+        console.log("Patient Response:", patientResponse);
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify(patientResponse)
+        };
+        
+    } catch (error) {
+        console.error('Error in handler:', error.message);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal Server Error', message: error.message }),
+        };
+    }
+};
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+};
+
+const bookPatient = async (providerid,appointmentDate,appointmentTime, patientid, reasonid, departmentid) => {
+   
+
+    const slot = await findSlots(providerid,appointmentDate,appointmentTime, patientid, reasonid, departmentid);
+
+    console.log(`✅ Booking slot at ${slot.date} ${slot.starttime} (appointment ID: ${slot.appointmentid})`);
+
+    if (!patientid || isNaN(patientid)) {
+        console.error("❌ Error: Invalid patient ID received:", patientid);
+        return { statusCode: 400, body: JSON.stringify({ error: "Invalid patient ID" }) };
+    }
+
+    if (!reasonid || isNaN(reasonid)) {
+        console.error("❌ Error: Invalid reason ID received:", reasonid);
+        return { statusCode: 400, body: JSON.stringify({ error: "Invalid reason ID" }) };
+    }
+
+    return slot
+};
+
+const formatResponse = (statusCode, body) => ({
+    statusCode,
+    body: JSON.stringify(body),
+});
+
+const findSlots = async (providerid,appointmentDate,appointmentTime, patientid, reasonid, departmentid) => {
+
+    const today = new Date(); // Get today's date
+    let daysToAdvance = 60;   // Number of days to add
+    
+    // Create a new Date object from today
+    const sixDaysFromNow = new Date(today);
+    
+    // Add 6 days
+    sixDaysFromNow.setDate(today.getDate() + daysToAdvance);
+    
+    console.log(`🔍 Finding slots for patient ${patientid} from ${formatDate(today)} to ${formatDate(sixDaysFromNow)}`);
+
+    if (!cachedToken) {
+        throw new Error("Missing auth token");
+    }
+
+    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/appointments/open`;
+    console.log("🔍 slotProvierid:", providerid);
+    console.log("🔍 slotDepartmentid:", departmentid);
+    console.log("🔍 slotReasonid:", reasonid)
+    console.log("🔍 slotAppointmentDate:", appointmentDate);
+    console.log("🔍 slotPatientid:", patientid);
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${cachedToken.access_token}` },
+            params: {
+                providerid,
+                departmentid,
+                startdate: formatDate(appointmentDate),
+                enddate: formatDate(sixDaysFromNow),
+                time: appointmentTime,
+                reasonid: reasonid, 
+                bypasscheduletimechecks: true,
+                ignoreschedulablepermission: true
+
+            }
+        });
+
+        console.log("📌 Slots found:", response.data);
+
+        let availableSlots = response.data.appointments || [];
+        console.log("🔍 Available Slots Data Structure:", JSON.stringify(availableSlots, null, 2));
+
+
+        if (!availableSlots.length) {
+            console.log("⚠️ No available slots found.");
+            return null; // No slots found
+        }
+
+        // console.log("✅ Available slots:", availableSlots);
+
+        let exactMatch = availableSlots.find(slot => slot.date === appointmentDate);
+        if (exactMatch && exactMatch.appointmentid) {
+            console.log("🎯 Exact match found:", exactMatch);
+            return exactMatch;
+        }
+
+        let closestSlot = availableSlots.sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+        if (!closestSlot || !closestSlot.appointmentid) {
+            console.error("❌ Error: No valid slot found after filtering.");
+            return null;
+        }
+
+        console.log("⏳ Closest available slot selected:", closestSlot);
+        return closestSlot;
+    } catch (error) {
+        console.error("❌ Error finding slots:", error.response?.data || error.message);
+        throw new Error("Failed to fetch available slots");
+    }
+};
+
+const getAuthToken = async ({ isProd }) => {
+    try {
+      const response = await axios.post('https://pdphr49frb.execute-api.us-west-1.amazonaws.com/Production/GetAuthToken', {
+        args: {
+          isProd
+        }
+      });
+  
+      if (response.status !== 200) {
+        throw new Error(`Auth call failed with status ${response.status}: ${response.statusText}`);
+      }
+  
+      const { token, data } = response.data;
+  
+      if (!token && data?.token) {
+        return data.token;
+      } else if (!token) {
+        throw new Error('No token found in response');
+      }
+  
+      return token;
+    } catch (error) {
+      console.error('Error fetching token via HTTP:', error.message);
+      throw error;
+    }
+  };

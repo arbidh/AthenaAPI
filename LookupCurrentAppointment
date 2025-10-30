@@ -1,0 +1,328 @@
+const crypto = require('crypto');
+const axios = require('axios');
+const AWS = require('aws-sdk');
+const secretsManager = new AWS.SecretsManager();
+const SECRET_ID = "athenaAuthTokenSecret";
+
+// Global cachedToken variable
+let cachedToken;
+const axiosRetry = require('axios-retry').default;
+const practiceid = 1
+
+axiosRetry(axios, {
+    retries: 3, // Retry up to 3 times
+    retryDelay: (retryCount) => retryCount * 2000, // Wait 2s, 4s, 6s before retrying
+    retryCondition: (error) => axiosRetry.isRetryableError(error) || error.code === 'ECONNABORTED',
+});
+
+exports.handler = async (event) => {
+    try {
+        console.log('Raw event body:', event.body);
+
+        if (!event.body || event.body.trim() === "") {
+            return { 
+                statusCode: 400, 
+                body: JSON.stringify({ error: "Missing or empty request body" }) 
+            };
+        }
+        //use yoru AI APIKey 
+        let payload;
+        try {
+            payload = JSON.parse(event.body);
+        } catch (error) {
+            return { 
+                statusCode: 400, 
+                body: JSON.stringify({ error: "Invalid JSON format" }) 
+            };
+        }
+        console.log("Parsed payload:", payload);
+        
+        const {patientid, departmentid} = payload.args;
+
+        // Ensure we have a valid token before making any API call.
+        cachedToken = await getTokenFromSecretsManager();
+        if (!cachedToken) {
+            cachedToken = await getOAuthToken();
+        }
+
+        // Get the reason ID first before searching for available slots
+        // const providerid = await getProviders(fname,lname)
+        // const reasonid = await getAppointmentReasonForPatient(providerid,1, reason,existing)
+        const originalschedule = await getBooked(patientid, departmentid)
+        console.log("Patient Response:", originalschedule);
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify(originalschedule)
+        };
+        
+    } catch (error) {
+        console.error('Error in handler:', error.message);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal Server Error', message: error.message }),
+        };
+    }
+};
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+};
+
+const getBooked = async (patientid, departmentid) => {
+    const url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/appointments/booked`;
+    const today = new Date();
+    const sixMonthsFromNow = new Date(today); // Create a new Date object
+    sixMonthsFromNow.setDate(today.getDate() + 180);
+
+    if (departmentid === undefined) {
+        departmentid = 1;
+    }
+    if (!cachedToken) {
+        cachedToken = await getOAuthToken();
+    }
+
+    const headers = {
+        'Authorization': `Bearer ${cachedToken.access_token}`,
+    };
+
+    try {
+        const response = await axios.get(url, {
+            headers,
+            params: {
+                patientid: patientid,
+                startdate: formatDate(today),
+                enddate: formatDate(sixMonthsFromNow),
+                departmentid: departmentid
+            },
+            timeout: 30000
+        });
+
+        // Log the entire response
+        console.log("📅 Full API Response:", JSON.stringify(response.data, null, 2));
+
+        if (!response.data || !response.data.appointments || response.data.appointments.length === 0) {
+            console.error("❌ No booked appointment found for patient:", patientid);
+            return { message: "No Appointments Found" };
+        }
+
+        // Ensure response is properly structured
+        const bookedAppointments = response.data.appointments
+            .filter(appointment => appointment.patientid == patientid)
+            .map(appointment => ({
+                patientid: appointment.patientid,
+                appointmentDate: appointment.date,
+                appointmentTime: appointment.starttime,
+                appointmentid: appointment.appointmentid,
+                providerid: appointment.providerid
+
+            }));
+
+        if (bookedAppointments.length === 0) {
+            console.log("❌ No matching booked appointments found.");
+            return { message: "No Appointments Found" };
+        }
+
+        console.log("✅ Found booked appointments:", JSON.stringify(bookedAppointments, null, 2));
+        return bookedAppointments;
+
+    } catch (error) {
+        console.error('❌ Error in getBooked:', error.response ? error.response.data : error.message);
+        return { error: 'Unknown error from Athena API' };
+    }
+};
+
+
+const formatResponse = (statusCode, body) => ({
+    statusCode,
+    body: JSON.stringify(body),
+});
+
+
+const getProviders = async (fname, lname) => {
+    if (!cachedToken) {
+       cachedToken = await getOAuthToken();
+    }
+
+    const url = `https://api.preview.platform.athenahealth.com/v1/17568/providers?limit=5&name=${fname}`;
+    
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${cachedToken.access_token}` },
+        });
+
+        console.log("📌 Providers found:", response.data);
+
+        // Check if providers exist
+        if (!response.data.providers || response.data.providers.length === 0) {
+            throw new Error("No providers found");
+        }
+
+        // Find provider with exact first name and last name
+        const matchedProvider = response.data.providers.find(
+            provider => provider.firstname === fname && provider.lastname === lname
+        );
+
+        // Return the matched provider's ID or fallback to the first provider's ID
+        return matchedProvider ? matchedProvider.providerid : response.data.providers[0].providerid;
+
+    } catch (error) {
+        console.error("❌ Error finding providers:", error.response?.data || error.message);
+        throw new Error(`Didn't Find any providers ${error.message}`);
+    }
+};
+
+
+const findSlots = async (providerid,appointmentDate,appointmentTime, patientid, reasonid) => {
+
+    const departmentid = 1;
+    const today = new Date();
+    const twoMonthsFromNow = new Date();
+;
+    
+    console.log(`🔍 Finding slots for patient ${patientid} from ${formatDate(today)} to ${formatDate(twoMonthsFromNow)}`);
+
+    if (!cachedToken) {
+        throw new Error("Missing auth token");
+    }
+
+    const url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/appointments/open`;
+    console.log("🔍 slotProvierid:", providerid);
+    console.log("🔍 slotDepartmentid:", departmentid);
+    console.log("🔍 slotReasonid:", reasonid)
+    console.log("🔍 slotAppointmentDate:", appointmentDate);
+    console.log("🔍 slotPatientid:", patientid);
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${cachedToken.access_token}` },
+            params: {
+                providerid,
+                departmentid,
+                startdate: appointmentDate,
+                time: appointmentTime,
+                reasonid: reasonid, 
+                bypasscheduletimechecks: true,
+                ignoreschedulablepermission: true
+
+            }
+        });
+
+        console.log("📌 Slots found:", response.data);
+
+        let availableSlots = response.data.appointments || [];
+
+        if (!availableSlots.length) {
+            console.log("⚠️ No available slots found.");
+            return null; // No slots found
+        }
+
+        // console.log("✅ Available slots:", availableSlots);
+
+        let exactMatch = availableSlots.find(slot => slot.date === appointmentDate);
+        if (exactMatch && exactMatch.appointmentid) {
+            console.log("🎯 Exact match found:", exactMatch);
+            return exactMatch;
+        }
+
+        let closestSlot = availableSlots.sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+        if (!closestSlot || !closestSlot.appointmentid) {
+            console.error("❌ Error: No valid slot found after filtering.");
+            return null;
+        }
+
+        console.log("⏳ Closest available slot selected:", closestSlot);
+        return closestSlot;
+    } catch (error) {
+        console.error("❌ Error finding slots:", error.response?.data || error.message);
+        throw new Error("Failed to fetch available slots");
+    }
+};
+
+const getPatientAppointmentReasons = async (providerid, departmentid, existing) => {
+    const provideridInt = parseInt(providerid, 10);
+    const departmentidInt = parseInt(departmentid, 10);
+    console.log("🔍 Fetching appointment reasons for provider:", provideridInt, "department:", departmentidInt);
+    let  url =`https://api.preview.platform.athenahealth.com/v1/${practiceid}/patientappointmentreasons/newpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
+    if (existing) {
+        url = `https://api.preview.platform.athenahealth.com/v1/${practiceid}/patientappointmentreasons/existingpatient?providerid=${provideridInt}&departmentid=${departmentidInt}`;
+    }
+     
+    if (!cachedToken) {
+        cachedToken = getOAuthToken()
+    }
+
+    try {
+        const response = await axios.get(url, { headers: { Authorization: `Bearer ${cachedToken.access_token}` } });
+        return response.data.patientappointmentreasons;
+    } catch (error) {
+        console.error("Error fetching appointment reasons:", error.response ? error.response.data : error);
+        throw new Error("Failed to fetch appointment reasons");
+    }
+};
+const getAppointmentReasonForPatient = async (providerid, departmentid, patientReason, existing) => {
+    const reasons = await getPatientAppointmentReasons(providerid, departmentid, existing);
+    
+    const matchedReason = reasons.find(reason => reason.description.toLowerCase().includes(patientReason.toLowerCase()));
+
+    if (matchedReason) {
+        return matchedReason.reasonid;
+    } else {
+        return reasons.length > 0 ? reasons[0].reasonid : null;
+    }
+};
+const getTokenFromSecretsManager = async () => {
+    try {
+        const secretValue = await secretsManager.getSecretValue({ SecretId: SECRET_ID }).promise();
+        const tokenData = JSON.parse(secretValue.SecretString);
+
+        if (Date.now() < tokenData.expires_at) {
+            console.log("Using cached token");
+            return tokenData;
+        }
+
+        return await getOAuthToken();
+    } catch (error) {
+        console.error('Error reading token from Secrets Manager:', error);
+        return await getOAuthToken();
+    }
+};
+
+const getOAuthToken = async () => {
+    const url = 'https://api.preview.platform.athenahealth.com/oauth2/v1/token';
+    const client_id = 'test'; // add client id here  
+    const client_secret = 'test'; //add client_secreate here 
+    const data = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: client_id,
+        client_secret: client_secret,
+        scope: 'athena/service/Athenanet.MDP.*',
+    });
+    try {
+        console.log("Attempting to fetch OAuth token...");
+
+        const response = await axios.post(url, data.toString(), {
+           headers: {
+               'Content-Type': 'application/x-www-form-urlencoded'
+           },
+        });
+
+        console.log("Token fetched successfully:", response.data);
+
+        const tokenData = {
+            access_token: response.data.access_token,
+            expires_at: Date.now() + response.data.expires_in * 1000,
+        };
+
+        await secretsManager.putSecretValue({
+            SecretId: SECRET_ID,
+            SecretString: JSON.stringify(tokenData),
+        }).promise();
+
+        return tokenData;
+    } catch (error) {
+        console.error('Error fetching OAuth token:', error.response?.data || error.message);
+        throw new Error("Failed to fetch token");
+    }
+};
