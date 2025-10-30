@@ -3,8 +3,8 @@ const axios = require('axios');
 const athena = require('./AthenaClient');
 
 // Global cachedToken variable
-let token;
-const practiceid = 1
+let cachedToken;
+const practiceid = athena.getPracticeId(1);
 
 exports.handler = async (event) => {
     try {
@@ -32,7 +32,8 @@ exports.handler = async (event) => {
 
         // Ensure we have a valid token before making any API call.
  
-    const token = await athena.getToken();
+        // Assign to module-level cachedToken so helper functions can access it
+        cachedToken = await athena.getToken();
         if (appointmentid == null) {
             return {
                 statusCode: 400,
@@ -72,7 +73,7 @@ const cancel = async (appointmentid, cancellationreason, patientid) => {
     const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/${appointmentid}/cancel`;
 
     const headers = {
-        'Authorization': `Bearer ${token.access_token}`,
+        'Authorization': `Bearer ${cachedToken.access_token}`,
         'Content-Type': 'application/x-www-form-urlencoded',
     };
 

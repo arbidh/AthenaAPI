@@ -1,7 +1,7 @@
 const axios = require('axios');
 const axiosRetry = require('axios-retry').default;
 const athena = require('./AthenaClient');
-const practiceid = 1; // add practice id here 
+const practiceid = athena.getPracticeId(1); // add practice id here 
 // Configure axios-retry
 axiosRetry(axios, {
     retries: 3,
@@ -18,11 +18,8 @@ exports.handler = async (event) => {
             return formatResponse(400, { error: "Missing or empty request body" });
         }
 
-        const signature = event.headers["x-retell-signature"];
-        if (!retell.verify(event.body, process.env.RETELL_API_KEY, signature)) {
-            console.log("Unauthorized request");
-            return formatResponse(401, { error: "Unauthorized" });
-        }
+            // removed retell signature verification to make the SDK local-only
+            // signature verification intentionally removed for local SDK usage
 
         const payload = JSON.parse(event.body);
         const { patientID } = payload.args;

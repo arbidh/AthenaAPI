@@ -5,7 +5,7 @@ const athena = require('./AthenaClient');
 // Global cachedToken variable
 let cachedToken;
 const axiosRetry = require('axios-retry').default;
-const practiceid = 17568
+const practiceid = athena.getPracticeId(17568);
 
 
 axiosRetry(axios, {

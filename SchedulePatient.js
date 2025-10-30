@@ -4,7 +4,7 @@ const athena = require('./AthenaClient');
 
 // Global cachedToken variable
 let cachedToken;
-const practiceid = 1
+const practiceid = athena.getPracticeId(1);
 
 
 exports.handler = async (event) => {
@@ -83,7 +83,7 @@ const bookPatient = async (providerid,patientid, appointmentid,reasonid, departm
         return { statusCode: 400, body: JSON.stringify({ error: "Invalid appointment ID" }) };
     }
 
-    const url = `https://api.platform.athenahealth.com/v1/${practiceid}/appointments/${appointmentIdStr}`;
+    const url = `${athena.getBaseUrl()}/v1/${practiceid}/appointments/${appointmentIdStr}`;
 
     if (!cachedToken || !cachedToken.access_token) {
         console.error("❌ Error: Missing authentication token");
