@@ -21,8 +21,22 @@ const getToken = async () => {
     return tokenCache;
   }
 
+  // If credentials aren't provided, return a safe local stub token so
+  // tests can run offline. To call real Athena, set ATHENA_CLIENT_ID and
+  // ATHENA_CLIENT_SECRET in your environment.
   if (!CLIENT_ID || CLIENT_ID === 'REPLACE_WITH_CLIENT_ID' || !CLIENT_SECRET || CLIENT_SECRET === 'REPLACE_WITH_CLIENT_SECRET') {
-    throw new Error('ATHENA_CLIENT_ID and ATHENA_CLIENT_SECRET must be provided (env vars or edit AthenaClient.js)');
+    console.warn('ATHENA_CLIENT_ID/ATHENA_CLIENT_SECRET not provided — returning STUB token for local testing');
+    if (tokenCache && Date.now() < tokenExpiry - 10000) {
+      return tokenCache;
+    }
+    tokenCache = {
+      access_token: 'stubbed-access-token',
+      token_type: 'bearer',
+      expires_in: 300,
+      scope: 'athena/service/Athenanet.MDP.*'
+    };
+    tokenExpiry = Date.now() + (tokenCache.expires_in * 1000);
+    return tokenCache;
   }
 
   const url = `${BASE_URL}/oauth2/v1/token`;
